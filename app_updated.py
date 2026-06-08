@@ -950,7 +950,7 @@ with tab2:
                 st.caption("Hiển thị HIGH/MEDIUM trước để người vận hành không phải đọc toàn bộ bảng lớn.")
                 show_n = st.slider("Số dòng hiển thị", 25, 500, 100, step=25, key="pred_priority_n")
                 st.dataframe(
-                    priority[compact_cols].head(show_n).style.applymap(style_risk_cell, subset=["Risk_Level"]),
+                    priority[compact_cols].head(show_n).style.map(style_risk_cell, subset=["Risk_Level"]),
                     use_container_width=True, height=420, hide_index=True
                 )
             elif view_mode == "Tóm tắt theo nhóm":
@@ -967,7 +967,7 @@ with tab2:
             else:
                 st.caption("Bảng đã rút bớt các trường kỹ thuật để dễ đọc; file Excel vẫn giữ đầy đủ cột.")
                 st.dataframe(
-                    result[compact_cols].sort_values("Fraud_Probability", ascending=False).head(1000).style.applymap(style_risk_cell, subset=["Risk_Level"]),
+                    result[compact_cols].sort_values("Fraud_Probability", ascending=False).head(1000).style.map(style_risk_cell, subset=["Risk_Level"]),
                     use_container_width=True, height=420, hide_index=True
                 )
 
@@ -1211,7 +1211,7 @@ with tab4:
         sec_header("4) QUEUE XỬ LÝ — TOP GIAO DỊCH RỦI RO")
         show_cols=[c for c in ["Transaction_ID","Fraud_Probability","Risk_Level","Transaction_Amount","Transaction_Type","Merchant_Category","Card_Type","Is_International","Unusual_Time","Account_Balance"] if c in dff.columns]
         queue=dff.sort_values("Fraud_Probability", ascending=False).head(300)
-        st.dataframe(queue[show_cols].style.applymap(style_risk_cell, subset=["Risk_Level"]), use_container_width=True, height=380, hide_index=True)
+        st.dataframe(queue[show_cols].style.map(style_risk_cell, subset=["Risk_Level"]), use_container_width=True, height=380, hide_index=True)
 
 
 # ═══════════════════════════════════════════════════════════
