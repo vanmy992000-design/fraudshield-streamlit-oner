@@ -829,52 +829,37 @@ with tab2:
         if "predict_result" in st.session_state:
             result = st.session_state["predict_result"]
             rc = result["Risk_Level"].value_counts()
+            n  = len(result)
 
-            c1,c2,c3,c4 = st.columns(4)
-            with c1: st.markdown(kpi(f"{len(result):,}", "TỔNG GIAO DỊCH"), unsafe_allow_html=True)
-            with c2: st.markdown(kpi(f"{rc.get('HIGH',0):,}", "HIGH RISK", "red"), unsafe_allow_html=True)
-            with c3: st.markdown(kpi(f"{rc.get('MEDIUM',0):,}", "MEDIUM RISK", "amber"), unsafe_allow_html=True)
-            with c4: st.markdown(kpi(f"{rc.get('LOW',0):,}", "LOW RISK", "green"), unsafe_allow_html=True)
-
-            # Risk distribution bar
-            n = len(result)
+            # ── Tóm tắt gọn — không lặp KPI cards ───────────
             p_h = rc.get("HIGH",0)/n*100
             p_m = rc.get("MEDIUM",0)/n*100
             p_l = rc.get("LOW",0)/n*100
             st.markdown(f"""
-            <div style="background:{C_BG2};border:1px solid {C_BORDER};border-radius:12px;
-                        padding:20px 24px;margin:16px 0;">
-                <div style="font-size:10px;color:{C_MUTED};font-weight:700;
-                            text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;">
-                    PHÂN BỔ RỦI RO</div>
-                <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px;">
-                    <div style="width:{p_h:.1f}%;background:{C_HIGH};border-radius:4px 0 0 4px;"></div>
-                    <div style="width:{p_m:.1f}%;background:{C_MED};"></div>
-                    <div style="width:{p_l:.1f}%;background:{C_LOW};border-radius:0 4px 4px 0;"></div>
+            <div style="background:{C_BG2};border:1px solid {C_BORDER};border-radius:14px;
+                        padding:20px 24px;margin:16px 0 24px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                            margin-bottom:14px;">
+                    <span style="font-size:10px;color:{C_MUTED};font-weight:700;
+                                 text-transform:uppercase;letter-spacing:0.12em;">
+                        KẾT QUẢ — {n:,} GIAO DỊCH ĐÃ PHÂN LOẠI</span>
+                    <span style="font-size:11px;color:{C_ACCENT_L};font-weight:600;">
+                        Xem chi tiết ở Tab TỔNG QUAN →</span>
                 </div>
-                <div style="display:flex;gap:20px;margin-top:10px;font-size:12px;">
-                    <span style="color:{C_HIGH};">● HIGH {p_h:.1f}%</span>
-                    <span style="color:{C_MED};">● MEDIUM {p_m:.1f}%</span>
-                    <span style="color:{C_LOW};">● LOW {p_l:.1f}%</span>
+                <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;">
+                    <div style="width:{p_h:.1f}%;background:{C_HIGH};border-radius:5px 0 0 5px;"></div>
+                    <div style="width:{p_m:.1f}%;background:{C_MED};"></div>
+                    <div style="width:{p_l:.1f}%;background:{C_LOW};border-radius:0 5px 5px 0;"></div>
+                </div>
+                <div style="display:flex;gap:24px;margin-top:10px;font-size:12px;font-weight:600;">
+                    <span style="color:{C_HIGH};">🔴 HIGH {p_h:.1f}% ({rc.get("HIGH",0):,})</span>
+                    <span style="color:{C_MED};">🟡 MEDIUM {p_m:.1f}% ({rc.get("MEDIUM",0):,})</span>
+                    <span style="color:{C_LOW};">🟢 LOW {p_l:.1f}% ({rc.get("LOW",0):,})</span>
                 </div>
             </div>""", unsafe_allow_html=True)
 
-            sec_header("KẾT QUẢ DỰ ĐOÁN CHI TIẾT")
-            sr = [c for c in ["Transaction_ID","Transaction_Amount","Transaction_Type",
-                               "Merchant_Category","Card_Type","Is_International",
-                               "Unusual_Time","Fraud_Probability","Risk_Level"]
-                  if c in result.columns]
-
-            def style_risk(v):
-                if v=="HIGH":   return f"background:{C_HIGH}20;color:{C_HIGH};font-weight:700"
-                if v=="MEDIUM": return f"background:{C_MED}20;color:{C_MED};font-weight:700"
-                if v=="LOW":    return f"background:{C_LOW}20;color:{C_LOW};font-weight:700"
-                return ""
-
-            st.dataframe(
-                result[sr].head(1000).style.applymap(style_risk, subset=["Risk_Level"]),
-                use_container_width=True, height=380)
-
+            # ── Xuất file ─────────────────────────────────────
+            sec_header("XUẤT BÁO CÁO")
             col_dl1, col_dl2 = st.columns(2)
             with col_dl1:
                 eb = df_to_excel_bytes(result)
@@ -899,9 +884,22 @@ with tab2:
                     except Exception as e:
                         st.error(f"Lỗi: {e}")
 
+            # ── Feature Importance — giải thích rõ ───────────
             fi_path = os.path.join(OUTPUT_DIR, "feature_importance.png")
             if os.path.exists(fi_path):
-                sec_header("FEATURE IMPORTANCE — TOP 10")
+                sec_header("FEATURE IMPORTANCE — YẾU TỐ ẢNH HƯỞNG ĐẾN DỰ ĐOÁN")
+                st.markdown(f"""
+                <div style="background:{C_ACCENT}08;border:1px solid {C_ACCENT}30;
+                            border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+                    <div style="font-size:13px;color:{C_TEXT};line-height:1.8;">
+                        <b style="color:{C_ACCENT_L};">Feature Importance là gì?</b><br>
+                        Biểu đồ này cho biết <b>yếu tố nào ảnh hưởng nhiều nhất</b> đến quyết định
+                        của model khi phán đoán một giao dịch là fraud hay không.<br>
+                        Thanh càng dài → yếu tố đó càng quan trọng.<br>
+                        Ví dụ: nếu <b>Transaction_Amount</b> đứng đầu → model chủ yếu dựa vào
+                        số tiền giao dịch để phát hiện fraud.
+                    </div>
+                </div>""", unsafe_allow_html=True)
                 st.image(fi_path, use_column_width=True)
 
 
@@ -941,30 +939,39 @@ with tab3:
         n_med  = rc.get("MEDIUM", 0)
         n_low  = rc.get("LOW", 0)
 
-        # ── KPI ──────────────────────────────────────────────
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: st.markdown(kpi(f"{n:,}", "TỔNG GIAO DỊCH"), unsafe_allow_html=True)
-        with c2: st.markdown(kpi(f"{n_high:,}", "🔴 HIGH RISK", "red"), unsafe_allow_html=True)
-        with c3: st.markdown(kpi(f"{n_med:,}", "🟡 MEDIUM RISK", "amber"), unsafe_allow_html=True)
-        with c4: st.markdown(kpi(f"{n_low:,}", "🟢 LOW RISK", "green"), unsafe_allow_html=True)
-
-        # ── Risk distribution bar ─────────────────────────────
+        # ── KPI chỉ hiện ở tab3, không lặp ─────────────────
         p_h = n_high/n*100; p_m = n_med/n*100; p_l = n_low/n*100
+        amt_col = "Transaction_Amount" if "Transaction_Amount" in df.columns else None
+        high_df = df[df["Risk_Level"] == "HIGH"]
+        total_high_amt = f"${high_df[amt_col].sum():,.1f}M" if amt_col else "N/A"
+        avg_prob = df["Fraud_Probability"].mean()*100 if "Fraud_Probability" in df.columns else 0
+
+        c1,c2,c3,c4 = st.columns(4)
+        with c1: st.markdown(kpi(f"{n:,}", "TỔNG GIAO DỊCH"), unsafe_allow_html=True)
+        with c2: st.markdown(kpi(f"{n_high:,} ({p_h:.1f}%)", "HIGH RISK", "red"), unsafe_allow_html=True)
+        with c3: st.markdown(kpi(total_high_amt, "GIÁ TRỊ HIGH RISK", "amber"), unsafe_allow_html=True)
+        with c4: st.markdown(kpi(f"{avg_prob:.1f}%", "AVG FRAUD PROB", "red" if avg_prob>=30 else "green"), unsafe_allow_html=True)
+
+        # ── Risk bar tổng thể ─────────────────────────────────
         st.markdown(f"""
         <div style="background:{C_BG2};border:1px solid {C_BORDER};border-radius:12px;
-                    padding:20px 24px;margin:16px 0 24px 0;">
-            <div style="font-size:10px;color:{C_MUTED};font-weight:700;
-                        text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;">
-                PHÂN BỔ RỦI RO TỔNG THỂ</div>
+                    padding:18px 24px;margin:16px 0 24px 0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        margin-bottom:12px;">
+                <span style="font-size:10px;color:{C_MUTED};font-weight:700;
+                             text-transform:uppercase;letter-spacing:0.12em;">
+                    PHÂN BỔ RỦI RO TỔNG THỂ</span>
+                <span style="font-size:11px;color:{C_MUTED};">{fname}</span>
+            </div>
             <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;">
                 <div style="width:{p_h:.1f}%;background:{C_HIGH};border-radius:5px 0 0 5px;"></div>
                 <div style="width:{p_m:.1f}%;background:{C_MED};"></div>
                 <div style="width:{p_l:.1f}%;background:{C_LOW};border-radius:0 5px 5px 0;"></div>
             </div>
             <div style="display:flex;gap:24px;margin-top:10px;font-size:12px;font-weight:600;">
-                <span style="color:{C_HIGH};">● HIGH {p_h:.1f}% ({n_high:,})</span>
-                <span style="color:{C_MED};">● MEDIUM {p_m:.1f}% ({n_med:,})</span>
-                <span style="color:{C_LOW};">● LOW {p_l:.1f}% ({n_low:,})</span>
+                <span style="color:{C_HIGH};">🔴 HIGH {p_h:.1f}% ({n_high:,})</span>
+                <span style="color:{C_MED};">🟡 MEDIUM {p_m:.1f}% ({n_med:,})</span>
+                <span style="color:{C_LOW};">🟢 LOW {p_l:.1f}% ({n_low:,})</span>
             </div>
         </div>""", unsafe_allow_html=True)
 
@@ -1061,22 +1068,65 @@ with tab3:
                               fontsize=11, pad=12, fontweight="700")
                 fig4.tight_layout(); st.pyplot(fig4); plt.close()
 
-        # ── Bảng tổng hợp theo International × Unusual Time ──
+        # ── Combo chart đẹp thay bảng trắng ─────────────────
         sec_header("TỔ HỢP RỦI RO — INTERNATIONAL × UNUSUAL TIME")
         if "Is_International" in df.columns and "Unusual_Time" in df.columns:
             df_c = df.copy()
             df_c["combo"] = df_c["Is_International"].astype(str) + " / " + df_c["Unusual_Time"].astype(str)
             cs = df_c.groupby("combo").agg(
-                Total      = ("Risk_Level", "count"),
-                High       = ("Risk_Level", lambda x: (x=="HIGH").sum()),
-                Avg_Prob   = ("Fraud_Probability", "mean"),
+                Total    = ("Risk_Level", "count"),
+                High     = ("Risk_Level", lambda x: (x=="HIGH").sum()),
+                Avg_Prob = ("Fraud_Probability", "mean"),
             ).reset_index()
-            cs["High_Rate (%)"] = (cs["High"] / cs["Total"] * 100).round(2)
-            cs["Avg_Prob (%)"]  = (cs["Avg_Prob"] * 100).round(2)
-            cs = cs.sort_values("High_Rate (%)", ascending=False)
-            cs.columns = ["Tổ hợp", "Tổng GD", "HIGH Risk", "Avg Prob", "High Rate (%)", "Avg Prob (%)"]
-            cs = cs.drop(columns=["Avg Prob"])
-            st.dataframe(cs, use_container_width=True, hide_index=True)
+            cs["High_Rate"] = (cs["High"] / cs["Total"] * 100).round(2)
+            cs["Avg_Prob_Pct"] = (cs["Avg_Prob"] * 100).round(2)
+            cs = cs.sort_values("High_Rate", ascending=False)
+
+            st.markdown(f"""
+            <div style="font-size:12px;color:{C_MUTED};margin-bottom:14px;line-height:1.7;">
+                Tổ hợp <b style="color:{C_TEXT};">Quốc tế + Giờ bất thường</b> có fraud rate cao nhất —
+                đây là pattern quan trọng nhất mà model đã học được.
+            </div>""", unsafe_allow_html=True)
+
+            max_rate = cs["High_Rate"].max()
+            for _, row_c in cs.iterrows():
+                bar_w = row_c["High_Rate"] / max_rate * 100 if max_rate > 0 else 0
+                rate  = row_c["High_Rate"]
+                prob  = row_c["Avg_Prob_Pct"]
+                if rate >= 6:   bg, border, label_c = f"{C_HIGH}12", f"{C_HIGH}50", C_HIGH
+                elif rate >= 4: bg, border, label_c = f"{C_MED}12",  f"{C_MED}50",  C_MED
+                else:           bg, border, label_c = f"{C_LOW}08",  f"{C_LOW}30",  C_LOW
+
+                # Parse combo label
+                parts = row_c["combo"].split(" / ")
+                intl_label = "🌏 Quốc tế" if "Yes" in parts[0] else "🏠 Trong nước"
+                time_label = "🌙 Giờ bất thường" if len(parts)>1 and "Yes" in parts[1] else "☀️ Giờ bình thường"
+
+                st.markdown(f"""
+                <div style="background:{bg};border:1px solid {border};border-radius:12px;
+                            padding:16px 20px;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <span style="font-size:13px;font-weight:700;color:{C_TEXT};">
+                                {intl_label} &nbsp;+&nbsp; {time_label}</span>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <span style="font-family:'JetBrains Mono',monospace;
+                                         font-size:18px;font-weight:700;color:{label_c};">
+                                {rate:.1f}%</span>
+                            <span style="font-size:10px;color:{C_MUTED};margin-left:4px;">fraud rate</span>
+                        </div>
+                    </div>
+                    <div style="background:{C_BG3};border-radius:6px;height:8px;overflow:hidden;">
+                        <div style="height:100%;width:{bar_w:.0f}%;background:{label_c};
+                                    border-radius:6px;opacity:0.85;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                margin-top:8px;font-size:11px;color:{C_MUTED};">
+                        <span>{row_c["Total"]:,} giao dịch · {row_c["High"]:,} HIGH risk</span>
+                        <span>avg prob: <b style="color:{label_c};">{prob:.1f}%</b></span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1131,13 +1181,44 @@ with tab4:
         n_l    = rc_f.get("LOW",    0)
         avg_p  = dff["Fraud_Probability"].mean() * 100 if "Fraud_Probability" in dff.columns else 0
 
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: st.markdown(kpi(f"{n_filt:,}",    "GIAO DỊCH LỌC"),       unsafe_allow_html=True)
-        with c2: st.markdown(kpi(f"{n_h:,}",        "HIGH RISK",   "red"),   unsafe_allow_html=True)
-        with c3: st.markdown(kpi(f"{n_m:,}",        "MEDIUM RISK", "amber"), unsafe_allow_html=True)
-        with c4: st.markdown(kpi(f"{avg_p:.1f}%",   "AVG FRAUD PROB", "red" if avg_p>=60 else "amber"), unsafe_allow_html=True)
+        # ── Summary bar thay KPI cards ────────────────────────
+        pf_h = n_h/n_filt*100 if n_filt>0 else 0
+        pf_m = n_m/n_filt*100 if n_filt>0 else 0
+        pf_l = (n_filt-n_h-n_m)/n_filt*100 if n_filt>0 else 0
+        st.markdown(f"""
+        <div style="background:{C_BG2};border:1px solid {C_BORDER};border-radius:12px;
+                    padding:16px 20px;margin-bottom:20px;display:flex;
+                    align-items:center;gap:24px;">
+            <div style="flex-shrink:0;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:22px;
+                            font-weight:700;color:{C_TEXT};">{n_filt:,}</div>
+                <div style="font-size:10px;color:{C_MUTED};font-weight:700;
+                            text-transform:uppercase;letter-spacing:0.1em;">GIAO DỊCH LỌC</div>
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:1px;">
+                    <div style="width:{pf_h:.1f}%;background:{C_HIGH};"></div>
+                    <div style="width:{pf_m:.1f}%;background:{C_MED};"></div>
+                    <div style="width:{pf_l:.1f}%;background:{C_LOW};"></div>
+                </div>
+                <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;font-weight:600;">
+                    <span style="color:{C_HIGH};">HIGH {n_h:,} ({pf_h:.0f}%)</span>
+                    <span style="color:{C_MED};">MEDIUM {n_m:,} ({pf_m:.0f}%)</span>
+                    <span style="color:{C_MUTED};">AVG PROB: {avg_p:.1f}%</span>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
-        # ── Scatter & Box plot ────────────────────────────────
+        # ── Phân tích sâu có kết nối: 3 biểu đồ liên quan ───
+        sec_header("PHÂN TÍCH PATTERN — 3 GÓC NHÌN LIÊN KẾT")
+        st.markdown(f"""
+        <div style="font-size:12px;color:{C_MUTED};margin-bottom:16px;line-height:1.7;">
+            Ba biểu đồ dưới đây liên kết với nhau: <b style="color:{C_TEXT};">Scatter</b> cho thấy
+            HIGH risk tập trung ở vùng nào (amount/balance),
+            <b style="color:{C_TEXT};">Box plot</b> xác nhận phân phối amount của từng nhóm,
+            <b style="color:{C_TEXT};">Bar chart</b> cho thấy nhóm nào nhiều HIGH risk nhất.
+        </div>""", unsafe_allow_html=True)
+
         cs1, cs2 = st.columns(2)
         with cs1:
             sec_header("SCATTER — AMOUNT VS ACCOUNT BALANCE")
@@ -1178,6 +1259,32 @@ with tab4:
                 ax8.set_title("Phân phối Amount theo Risk Level", color=C_TEXT,
                               fontsize=11, fontweight="700")
                 fig8.tight_layout(); st.pyplot(fig8); plt.close()
+
+        # ── Bar chart: Merchant × Risk ───────────────────────
+        if "Merchant_Category" in dff.columns and "Risk_Level" in dff.columns:
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            sec_header("HIGH RISK THEO MERCHANT — LIÊN KẾT VỚI BỘ LỌC HIỆN TẠI")
+            mc_grp = dff.groupby("Merchant_Category").agg(
+                High  = ("Risk_Level", lambda x: (x=="HIGH").sum()),
+                Total = ("Risk_Level", "count"),
+            ).reset_index()
+            mc_grp["Rate"] = (mc_grp["High"]/mc_grp["Total"]*100).round(1)
+            mc_grp = mc_grp.sort_values("High", ascending=True)
+            fig_mc, ax_mc = chart_fig(10, max(3, len(mc_grp)*0.55))
+            colors_mc = [C_HIGH if r>=5 else (C_MED if r>=3 else C_CHART3)
+                         for r in mc_grp["Rate"]]
+            bars_mc = ax_mc.barh(mc_grp["Merchant_Category"], mc_grp["High"],
+                                  color=colors_mc, edgecolor="none", zorder=3)
+            for bar, rate in zip(bars_mc, mc_grp["Rate"]):
+                w = bar.get_width()
+                ax_mc.text(w + mc_grp["High"].max()*0.01, bar.get_y()+bar.get_height()/2,
+                           f"{rate:.1f}%", va="center", ha="left",
+                           fontsize=9, color=C_MUTED, fontweight="600")
+            ax_mc.set_xlabel("Số giao dịch HIGH Risk", color=C_MUTED)
+            ax_mc.set_title("HIGH Risk theo Merchant (filter hiện tại)", color=C_TEXT,
+                            fontsize=11, fontweight="700")
+            ax_mc.tick_params(axis='y', colors=C_TEXT, labelsize=9)
+            fig_mc.tight_layout(); st.pyplot(fig_mc); plt.close()
 
         # ── Dữ liệu chi tiết ─────────────────────────────────
         sec_header("DỮ LIỆU CHI TIẾT (1000 DÒNG ĐẦU)")
@@ -1245,11 +1352,20 @@ with tab5:
         n_med   = (filtered["Risk_Level"]=="MEDIUM").sum() if "Risk_Level" in filtered.columns else 0
         n_low   = (filtered["Risk_Level"]=="LOW").sum()    if "Risk_Level" in filtered.columns else 0
 
-        c1,c2,c3,c4 = st.columns(4)
-        with c1: st.markdown(kpi(f"{n_found:,}", "TÌM THẤY", "indigo"), unsafe_allow_html=True)
-        with c2: st.markdown(kpi(f"{n_high:,}",  "HIGH RISK", "red"),    unsafe_allow_html=True)
-        with c3: st.markdown(kpi(f"{n_med:,}",   "MEDIUM RISK", "amber"),unsafe_allow_html=True)
-        with c4: st.markdown(kpi(f"{n_low:,}",   "LOW RISK", "green"),   unsafe_allow_html=True)
+        # ── Summary nhỏ gọn thay 4 KPI cards ────────────────
+        st.markdown(f"""
+        <div style="background:{C_BG2};border:1px solid {C_BORDER};border-radius:10px;
+                    padding:14px 20px;margin-bottom:16px;display:flex;
+                    align-items:center;gap:20px;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:16px;
+                          font-weight:700;color:{C_TEXT};">{n_found:,} giao dịch</span>
+            <span style="color:{C_HIGH};font-weight:700;font-size:13px;">
+                🔴 HIGH: {n_high:,}</span>
+            <span style="color:{C_MED};font-weight:700;font-size:13px;">
+                🟡 MED: {n_med:,}</span>
+            <span style="color:{C_LOW};font-weight:700;font-size:13px;">
+                🟢 LOW: {n_low:,}</span>
+        </div>""", unsafe_allow_html=True)
 
         if n_found == 0:
             st.markdown(f"""
@@ -1317,13 +1433,31 @@ with tab5:
             pool = filtered[filtered["Risk_Level"]=="HIGH"].sort_values(
                 "Fraud_Probability", ascending=False) if n_high>0 else filtered
 
-            if "Transaction_ID" in pool.columns:
-                opts = pool["Transaction_ID"].astype(str).tolist()[:100]
-                sel_id = st.selectbox("CHỌN GIAO DỊCH", opts, key="detail_select")
-                row = pool[pool["Transaction_ID"].astype(str)==sel_id].iloc[0]
-            else:
-                idx = st.number_input("CHỌN DÒNG", 0, max(0,len(pool)-1), 0)
-                row = pool.iloc[int(idx)]
+            # Tạo label thông minh: Amount + Type + Merchant + Prob
+            def make_label(r):
+                parts = []
+                if "Transaction_Amount" in r.index:
+                    parts.append(f"${r['Transaction_Amount']:.2f}M")
+                if "Transaction_Type" in r.index:
+                    parts.append(str(r["Transaction_Type"]))
+                if "Merchant_Category" in r.index:
+                    parts.append(str(r["Merchant_Category"]))
+                if "Fraud_Probability" in r.index:
+                    parts.append(f"prob={r['Fraud_Probability']*100:.1f}%")
+                if "Transaction_ID" in r.index:
+                    parts.append(f"ID#{r['Transaction_ID']}")
+                return "  ·  ".join(parts)
+
+            pool100 = pool.head(100)
+            opts_labels = [make_label(r) for _, r in pool100.iterrows()]
+            sel_label = st.selectbox(
+                "CHỌN GIAO DỊCH ĐỂ XEM CHI TIẾT",
+                opts_labels,
+                key="detail_select",
+                help="Hiển thị: Số tiền · Loại GD · Merchant · Xác suất fraud"
+            )
+            sel_idx = opts_labels.index(sel_label) if sel_label in opts_labels else 0
+            row = pool100.iloc[sel_idx]
 
             prob      = float(row.get("Fraud_Probability", 0))
             risk      = row.get("Risk_Level", "LOW")
