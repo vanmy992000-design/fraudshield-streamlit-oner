@@ -1,5 +1,5 @@
 FraudShield — Model Evaluation (XGBoost)
-Trained at : 2026-06-08 22:03:24
+Trained at : 2026-06-09 12:40:20
 ==================================================
 
 AUC-ROC    : 0.5471
